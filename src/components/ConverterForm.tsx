@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,169 +18,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   const [isConverting, setIsConverting] = useState(false);
   const { toast } = useToast();
 
-  const createXLSXBlob = (xmlContent: string) => {
-    try {
-      // Parse XML
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
-      
-      // Create a workbook with a worksheet
-      const xlsx = {
-        SheetNames: ['Modelos'],
-        Sheets: {
-          'Modelos': {
-            '!ref': 'A1:P1', // At minimum, include header row
-            A1: { t: 's', v: 'NUM.' },
-            B1: { t: 's', v: 'MÓDULO' },
-            C1: { t: 's', v: 'CLIENTE' },
-            D1: { t: 's', v: 'AMBIENTE' },
-            E1: { t: 's', v: 'DESC. DA PEÇA' },
-            F1: { t: 's', v: 'OBSERVAÇÕES DA PEÇA' },
-            G1: { t: 's', v: 'COMP' },
-            H1: { t: 's', v: 'LARG' },
-            I1: { t: 's', v: 'QUANT' },
-            J1: { t: 's', v: 'BORDA INF' },
-            K1: { t: 's', v: 'BORDA SUP' },
-            L1: { t: 's', v: 'BORDA DIR' },
-            M1: { t: 's', v: 'BORDA ESQ' },
-            N1: { t: 's', v: 'COR FITA DE BORDA' },
-            O1: { t: 's', v: 'CHAPA' },
-            P1: { t: 's', v: 'ESP.' }
-          }
-        }
-      };
-      
-      // Try to find model categories using a variety of possible XPaths
-      const modelCategories = Array.from(xmlDoc.querySelectorAll('MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation'));
-      
-      if (modelCategories.length === 0) {
-        // If no categories found, create a simple conversion
-        return createSimpleXLSXFromXML(xmlDoc);
-      }
-      
-      let rowIndex = 2; // Starting after header row
-      
-      modelCategories.forEach(category => {
-        const categoryDesc = category.getAttribute('DESCRIPTION') || category.getAttribute('Description') || 'Unknown Category';
-        
-        // Find all model information elements within this category
-        const modelInfos = Array.from(category.querySelectorAll('MODELINFORMATION, ModelInformation, modelinformation'));
-        
-        modelInfos.forEach(modelInfo => {
-          const modelDesc = modelInfo.getAttribute('DESCRIPTION') || modelInfo.getAttribute('Description') || 'Unknown Model';
-          const modelId = modelInfo.getAttribute('ID') || modelInfo.getAttribute('Id') || '';
-          
-          // Find all model type information elements within this model
-          const modelTypes = Array.from(modelInfo.querySelectorAll('MODELTYPEINFORMATION, ModelTypeInformation, modeltypeinformation'));
-          
-          if (modelTypes.length === 0) {
-            // Add a row even if no model types
-            addRow(xlsx.Sheets['Modelos'], rowIndex, {
-              modelId,
-              categoryDesc,
-              modelDesc
-            });
-            rowIndex++;
-          } else {
-            modelTypes.forEach(typeInfo => {
-              const typeDesc = typeInfo.getAttribute('DESCRIPTION') || typeInfo.getAttribute('Description') || '';
-              const typeId = typeInfo.getAttribute('ID') || typeInfo.getAttribute('Id') || '';
-              
-              addRow(xlsx.Sheets['Modelos'], rowIndex, {
-                modelId,
-                categoryDesc,
-                modelDesc,
-                typeDesc,
-                typeId
-              });
-              
-              rowIndex++;
-            });
-          }
-        });
-      });
-      
-      // Update reference to include all rows
-      xlsx.Sheets['Modelos']['!ref'] = `A1:P${rowIndex - 1}`;
-      
-      // Convert workbook to binary string
-      const s2ab = (s: string) => {
-        const buf = new ArrayBuffer(s.length);
-        const view = new Uint8Array(buf);
-        for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
-        return buf;
-      };
-      
-      // Using XLSX-populated format, but it's a simplified version
-      const xlsxData = JSON.stringify(xlsx);
-      
-      // This is a simplified approach; in a real solution we would use an actual XLSX library
-      const blob = new Blob([s2ab(xlsxData)], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-      return blob;
-      
-    } catch (error) {
-      console.error('Error creating XLSX:', error);
-      return null;
-    }
-  };
-  
-  const createSimpleXLSXFromXML = (xmlDoc: Document) => {
-    // Create a simplified XML structure as CSV, then encode as XLSX-like format
-    const rootElem = xmlDoc.documentElement;
-    const allElements = Array.from(rootElem.getElementsByTagName('*'));
-    
-    // Extract up to 100 unique element names to form columns
-    const elementNames = Array.from(new Set(allElements.map(el => el.tagName))).slice(0, 100);
-    
-    // Create a simple XLSX-like structure with just the element names
-    const xlsx = {
-      SheetNames: ['XMLData'],
-      Sheets: {
-        'XMLData': {
-          '!ref': `A1:${String.fromCharCode(65 + elementNames.length - 1)}1`,
-        }
-      }
-    };
-    
-    // Add header row with element names
-    elementNames.forEach((name, index) => {
-      const colLetter = String.fromCharCode(65 + index);
-      xlsx.Sheets['XMLData'][`${colLetter}1`] = { t: 's', v: name };
-    });
-    
-    // Convert to binary
-    const s2ab = (s: string) => {
-      const buf = new ArrayBuffer(s.length);
-      const view = new Uint8Array(buf);
-      for (let i = 0; i < s.length; i++) view[i] = s.charCodeAt(i) & 0xFF;
-      return buf;
-    };
-    
-    const xlsxData = JSON.stringify(xlsx);
-    const blob = new Blob([s2ab(xlsxData)], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    return blob;
-  };
-  
-  // Helper function to add a row to the sheet
-  const addRow = (sheet: any, rowIndex: number, data: any) => {
-    sheet[`A${rowIndex}`] = { t: 's', v: data.modelId || '' };
-    sheet[`B${rowIndex}`] = { t: 's', v: 'Cozinhas' }; // Default value
-    sheet[`C${rowIndex}`] = { t: 's', v: 'Cliente Exemplo' }; // Default value
-    sheet[`D${rowIndex}`] = { t: 's', v: data.categoryDesc || '' };
-    sheet[`E${rowIndex}`] = { t: 's', v: data.modelDesc || '' };
-    sheet[`F${rowIndex}`] = { t: 's', v: 'Observações Exemplo' }; // Default value
-    sheet[`G${rowIndex}`] = { t: 's', v: '100' }; // Default value
-    sheet[`H${rowIndex}`] = { t: 's', v: '50' }; // Default value
-    sheet[`I${rowIndex}`] = { t: 's', v: '2' }; // Default value
-    sheet[`J${rowIndex}`] = { t: 's', v: 'Branco' }; // Default value
-    sheet[`K${rowIndex}`] = { t: 's', v: 'Branco' }; // Default value
-    sheet[`L${rowIndex}`] = { t: 's', v: 'Branco' }; // Default value
-    sheet[`M${rowIndex}`] = { t: 's', v: 'Branco' }; // Default value
-    sheet[`N${rowIndex}`] = { t: 's', v: 'Branco' }; // Default value
-    sheet[`O${rowIndex}`] = { t: 's', v: 'Chapa Exemplo' }; // Default value
-    sheet[`P${rowIndex}`] = { t: 's', v: 'Espessura Exemplo' }; // Default value
-  };
-
   const handleConvert = () => {
     if (!xmlFile) {
       toast({
@@ -200,12 +36,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       try {
         const xmlContent = e.target?.result as string;
         
-        // Instead of using a real library (which would be ideal),
-        // let's create a CSVString in a format Excel can open
+        // Convert XML to CSV
         const csvString = convertXMLToCSV(xmlContent);
         
-        // Create a blob for the CSV
-        const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+        // Create a Blob with BOM for Excel UTF-8 compatibility
+        const BOM = "\uFEFF"; // UTF-8 BOM character
+        const blob = new Blob([BOM + csvString], { type: 'text/csv;charset=utf-8;' });
         
         // Create a link and trigger the download
         const link = document.createElement('a');
@@ -251,14 +87,14 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
       
       // Prepare the CSV content, starting with headers
-      let csvContent = "NUM.,MÓDULO,CLIENTE,AMBIENTE,DESC. DA PEÇA,OBSERVAÇÕES DA PEÇA,COMP,LARG,QUANT,BORDA INF,BORDA SUP,BORDA DIR,BORDA ESQ,COR FITA DE BORDA,CHAPA,ESP.\n";
+      let csvContent = "NUM.;MÓDULO;CLIENTE;AMBIENTE;DESC. DA PEÇA;OBSERVAÇÕES DA PEÇA;COMP;LARG;QUANT;BORDA INF;BORDA SUP;BORDA DIR;BORDA ESQ;COR FITA DE BORDA;CHAPA;ESP.\n";
       
       // Try to find model categories using a variety of possible XPaths
       const modelCategories = Array.from(xmlDoc.querySelectorAll('MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation'));
       
       if (modelCategories.length === 0) {
         // If no categories found, create a simple sample row
-        csvContent += `1,Cozinhas,Cliente Exemplo,Exemplo,Exemplo Peça,Observações Exemplo,100,50,2,Branco,Branco,Branco,Branco,Branco,Chapa Exemplo,Espessura Exemplo\n`;
+        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'Branco', 'Branco', 'Branco', 'Branco', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
         return csvContent;
       }
       
@@ -279,11 +115,45 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           
           if (modelTypes.length === 0) {
             // Add a row even if no model types
-            csvContent += createCSVRow(modelId, categoryDesc, modelDesc);
+            csvContent += formatCSVRow([
+              modelId || '1', 
+              'Cozinhas', 
+              'Cliente Exemplo', 
+              categoryDesc, 
+              modelDesc, 
+              'Observações Exemplo', 
+              '100', 
+              '50', 
+              '2', 
+              'Branco', 
+              'Branco', 
+              'Branco', 
+              'Branco', 
+              'Branco', 
+              'Chapa Exemplo', 
+              'Espessura Exemplo'
+            ]);
             rowCount++;
           } else {
             modelTypes.forEach(() => {
-              csvContent += createCSVRow(modelId, categoryDesc, modelDesc);
+              csvContent += formatCSVRow([
+                modelId || '1', 
+                'Cozinhas', 
+                'Cliente Exemplo', 
+                categoryDesc, 
+                modelDesc, 
+                'Observações Exemplo', 
+                '100', 
+                '50', 
+                '2', 
+                'Branco', 
+                'Branco', 
+                'Branco', 
+                'Branco', 
+                'Branco', 
+                'Chapa Exemplo', 
+                'Espessura Exemplo'
+              ]);
               rowCount++;
             });
           }
@@ -292,7 +162,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       if (rowCount === 0) {
         // Add a sample row if no data was found
-        csvContent += `1,Cozinhas,Cliente Exemplo,Exemplo,Exemplo Peça,Observações Exemplo,100,50,2,Branco,Branco,Branco,Branco,Branco,Chapa Exemplo,Espessura Exemplo\n`;
+        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'Branco', 'Branco', 'Branco', 'Branco', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
       }
       
       return csvContent;
@@ -300,32 +170,23 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     } catch (error) {
       console.error('Error converting XML to CSV:', error);
       // Return a basic CSV with just headers if there's an error
-      return "NUM.,MÓDULO,CLIENTE,AMBIENTE,DESC. DA PEÇA,OBSERVAÇÕES DA PEÇA,COMP,LARG,QUANT,BORDA INF,BORDA SUP,BORDA DIR,BORDA ESQ,COR FITA DE BORDA,CHAPA,ESP.\n";
+      return "NUM.;MÓDULO;CLIENTE;AMBIENTE;DESC. DA PEÇA;OBSERVAÇÕES DA PEÇA;COMP;LARG;QUANT;BORDA INF;BORDA SUP;BORDA DIR;BORDA ESQ;COR FITA DE BORDA;CHAPA;ESP.\n";
     }
   };
   
-  const createCSVRow = (modelId: string, categoryDesc: string, modelDesc: string): string => {
-    // Escape any commas in the values
-    const escapeCSV = (value: string) => `"${value.replace(/"/g, '""')}"`;
+  const formatCSVRow = (values: string[]): string => {
+    // Format values for Excel CSV standard - using semicolons as separators and double-quotes for text fields
+    const formattedValues = values.map(value => {
+      // Check if value contains special characters that require quotes
+      if (value.includes(';') || value.includes('"') || value.includes('\n') || value.includes(',')) {
+        // Escape double quotes by doubling them and wrap in quotes
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    });
     
-    return [
-      modelId || '1',
-      'Cozinhas',
-      'Cliente Exemplo',
-      escapeCSV(categoryDesc),
-      escapeCSV(modelDesc),
-      'Observações Exemplo',
-      '100',
-      '50',
-      '2',
-      'Branco',
-      'Branco',
-      'Branco',
-      'Branco',
-      'Branco',
-      'Chapa Exemplo',
-      'Espessura Exemplo'
-    ].join(',') + '\n';
+    // Join with semicolons (better Excel compatibility in many locales, especially Brazil)
+    return formattedValues.join(';') + '\n';
   };
 
   return (
