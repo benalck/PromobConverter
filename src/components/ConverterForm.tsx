@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,7 +90,99 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       // Prepare the CSV content, starting with headers
       let csvContent = "NUM.;MÓDULO;CLIENTE;AMBIENTE;DESC. DA PEÇA;OBSERVAÇÕES DA PEÇA;COMP;LARG;QUANT;BORDA INF;BORDA SUP;BORDA DIR;BORDA ESQ;COR FITA DE BORDA;CHAPA;ESP.\n";
       
-      // Try to find model categories using a variety of possible XPaths
+      // First try to parse ITEM tags (new format)
+      const itemElements = xmlDoc.querySelectorAll('ITEM');
+      
+      if (itemElements.length > 0) {
+        let rowCount = 1;
+        
+        itemElements.forEach(item => {
+          const id = item.getAttribute('ID') || '';
+          const description = item.getAttribute('DESCRIPTION') || '';
+          const observations = item.getAttribute('OBSERVATIONS') || '';
+          const width = item.getAttribute('WIDTH') || '';
+          const depth = item.getAttribute('DEPTH') || '';
+          const quantity = item.getAttribute('QUANTITY') || '1';
+          const family = item.getAttribute('FAMILY') || '';
+          
+          // Get material and color from references
+          let material = '';
+          let color = '';
+          let thickness = '';
+          
+          // Try to find REFERENCES section inside the ITEM
+          const referencesElements = item.querySelectorAll('REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > THICKNESS');
+          
+          referencesElements.forEach(ref => {
+            const tagName = ref.tagName;
+            const referenceValue = ref.getAttribute('REFERENCE') || '';
+            
+            if (tagName === 'MATERIAL') {
+              material = referenceValue;
+            } else if (tagName === 'MODEL' || tagName === 'MODEL_DESCRIPTION') {
+              color = referenceValue;
+            } else if (tagName === 'THICKNESS') {
+              thickness = referenceValue;
+            }
+          });
+          
+          // Get edge banding information
+          let edgeBottom = 'Não';
+          let edgeTop = 'Não';
+          let edgeRight = 'Não';
+          let edgeLeft = 'Não';
+          
+          const edgeElements = item.querySelectorAll('REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4');
+          
+          edgeElements.forEach(edge => {
+            const tagName = edge.tagName;
+            const value = edge.getAttribute('REFERENCE') || '0';
+            
+            if (tagName === 'FITA_BORDA_1') {
+              edgeBottom = value === '1' ? 'Sim' : 'Não';
+            } else if (tagName === 'FITA_BORDA_2') {
+              edgeTop = value === '1' ? 'Sim' : 'Não';
+            } else if (tagName === 'FITA_BORDA_3') {
+              edgeRight = value === '1' ? 'Sim' : 'Não';
+            } else if (tagName === 'FITA_BORDA_4') {
+              edgeLeft = value === '1' ? 'Sim' : 'Não';
+            }
+          });
+          
+          // Get edge band color
+          let edgeColor = color; // Default to the same color as the piece
+          const edgeColorElement = item.querySelector('REFERENCES > MODEL_DESCRIPTION_FITA');
+          if (edgeColorElement) {
+            edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
+          }
+          
+          // Add row to CSV
+          csvContent += formatCSVRow([
+            rowCount.toString(),          // NUM.
+            family,                       // MÓDULO
+            'Cliente',                    // CLIENTE (can be customized)
+            'Ambiente',                   // AMBIENTE
+            description,                  // DESC. DA PEÇA
+            observations,                 // OBSERVAÇÕES DA PEÇA
+            depth,                        // COMP
+            width,                        // LARG
+            quantity,                     // QUANT
+            edgeBottom,                   // BORDA INF
+            edgeTop,                      // BORDA SUP
+            edgeRight,                    // BORDA DIR
+            edgeLeft,                     // BORDA ESQ
+            edgeColor,                    // COR FITA DE BORDA
+            material,                     // CHAPA
+            thickness                     // ESP.
+          ]);
+          
+          rowCount++;
+        });
+        
+        return csvContent;
+      }
+      
+      // If no ITEM tags, try the previous format with model categories
       const modelCategories = Array.from(xmlDoc.querySelectorAll('MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation'));
       
       if (modelCategories.length === 0) {
@@ -98,7 +191,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         return csvContent;
       }
       
-      let rowCount = 0;
+      let rowCount = 1;
       
       modelCategories.forEach(category => {
         const categoryDesc = category.getAttribute('DESCRIPTION') || category.getAttribute('Description') || 'Unknown Category';
@@ -116,7 +209,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           if (modelTypes.length === 0) {
             // Add a row even if no model types
             csvContent += formatCSVRow([
-              modelId || '1', 
+              rowCount.toString(), 
               'Cozinhas', 
               'Cliente Exemplo', 
               categoryDesc, 
@@ -137,7 +230,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           } else {
             modelTypes.forEach(() => {
               csvContent += formatCSVRow([
-                modelId || '1', 
+                rowCount.toString(), 
                 'Cozinhas', 
                 'Cliente Exemplo', 
                 categoryDesc, 
@@ -160,7 +253,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         });
       });
       
-      if (rowCount === 0) {
+      if (rowCount === 1) {
         // Add a sample row if no data was found
         csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'Branco', 'Branco', 'Branco', 'Branco', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
       }

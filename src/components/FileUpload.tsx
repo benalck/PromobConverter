@@ -40,8 +40,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
       
       if (fileType === 'XML' && fileExtension !== 'xml') {
         toast({
-          title: "Invalid file type",
-          description: "Please upload an XML file.",
+          title: "Tipo de arquivo inválido",
+          description: "Por favor, faça upload de um arquivo XML.",
           variant: "destructive"
         });
         return;
@@ -56,8 +56,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
     onFileSelect(selectedFile);
     
     toast({
-      title: "File selected",
-      description: `${selectedFile.name} ready for conversion.`,
+      title: "Arquivo selecionado",
+      description: `${selectedFile.name} pronto para conversão.`,
       variant: "default"
     });
   };
@@ -79,8 +79,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
     }
     
     toast({
-      title: "File removed",
-      description: "Upload a new file to continue.",
+      title: "Arquivo removido",
+      description: "Faça upload de um novo arquivo para continuar.",
       variant: "default"
     });
   };
@@ -88,7 +88,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
   return (
     <div className="w-full mb-8 animate-fade-in">
       <div 
-        className={`file-drop-area ${isDragging ? 'active' : ''} ${file ? 'bg-secondary/50' : ''}`}
+        className={`border-2 border-dashed rounded-lg p-6 transition-colors ${
+          isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/20'
+        } ${file ? 'bg-secondary/50' : ''} file-drop-area`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -104,9 +106,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
         {!file ? (
           <div className="flex flex-col items-center justify-center py-4">
             <FileCode2 className="h-12 w-12 text-muted-foreground mb-4 animate-pulse-subtle" />
-            <h3 className="text-lg font-medium mb-2">Upload your {fileType} file</h3>
+            <h3 className="text-lg font-medium mb-2">Upload do arquivo {fileType}</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Drag and drop your file here, or click the button below
+              Arraste e solte seu arquivo aqui, ou clique no botão abaixo
             </p>
             <Button 
               onClick={handleButtonClick}
@@ -116,7 +118,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
               <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-0 transition-all duration-300 group-hover:opacity-100">
                 <Upload className="h-4 w-4" />
               </span>
-              <span className="relative z-10">Select File</span>
+              <span className="relative z-10">Selecionar Arquivo</span>
             </Button>
           </div>
         ) : (
@@ -133,14 +135,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
                 className="flex items-center gap-2"
               >
                 <FileX className="h-4 w-4" />
-                Remove
+                Remover
               </Button>
               <Button
                 onClick={handleButtonClick}
                 className="flex items-center gap-2"
               >
                 <Upload className="h-4 w-4" />
-                Change File
+                Trocar Arquivo
               </Button>
             </div>
           </div>
