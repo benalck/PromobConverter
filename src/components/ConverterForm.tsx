@@ -111,7 +111,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           let thickness = '';
           
           // Try to find REFERENCES section inside the ITEM
-          const referencesElements = item.querySelectorAll('REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > THICKNESS');
+          const referencesElements = item.querySelectorAll('REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > THICKNESS');
           
           referencesElements.forEach(ref => {
             const tagName = ref.tagName;
@@ -126,11 +126,11 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
           });
           
-          // Get edge banding information
-          let edgeBottom = 'Não';
-          let edgeTop = 'Não';
-          let edgeRight = 'Não';
-          let edgeLeft = 'Não';
+          // Get edge banding information - using X instead of "Sim" and empty string instead of "Não"
+          let edgeBottom = '';
+          let edgeTop = '';
+          let edgeRight = '';
+          let edgeLeft = '';
           
           const edgeElements = item.querySelectorAll('REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4');
           
@@ -139,13 +139,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             const value = edge.getAttribute('REFERENCE') || '0';
             
             if (tagName === 'FITA_BORDA_1') {
-              edgeBottom = value === '1' ? 'Sim' : 'Não';
+              edgeBottom = value === '1' ? 'X' : '';
             } else if (tagName === 'FITA_BORDA_2') {
-              edgeTop = value === '1' ? 'Sim' : 'Não';
+              edgeTop = value === '1' ? 'X' : '';
             } else if (tagName === 'FITA_BORDA_3') {
-              edgeRight = value === '1' ? 'Sim' : 'Não';
+              edgeRight = value === '1' ? 'X' : '';
             } else if (tagName === 'FITA_BORDA_4') {
-              edgeLeft = value === '1' ? 'Sim' : 'Não';
+              edgeLeft = value === '1' ? 'X' : '';
             }
           });
           
@@ -187,7 +187,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       if (modelCategories.length === 0) {
         // If no categories found, create a simple sample row
-        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'Branco', 'Branco', 'Branco', 'Branco', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
+        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'X', '', 'X', '', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
         return csvContent;
       }
       
@@ -218,10 +218,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               '100', 
               '50', 
               '2', 
-              'Branco', 
-              'Branco', 
-              'Branco', 
-              'Branco', 
+              'X', 
+              '', 
+              'X', 
+              '', 
               'Branco', 
               'Chapa Exemplo', 
               'Espessura Exemplo'
@@ -239,10 +239,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 '100', 
                 '50', 
                 '2', 
-                'Branco', 
-                'Branco', 
-                'Branco', 
-                'Branco', 
+                'X', 
+                '', 
+                'X', 
+                '', 
                 'Branco', 
                 'Chapa Exemplo', 
                 'Espessura Exemplo'
@@ -255,7 +255,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       if (rowCount === 1) {
         // Add a sample row if no data was found
-        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'Branco', 'Branco', 'Branco', 'Branco', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
+        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'X', '', 'X', '', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
       }
       
       return csvContent;
