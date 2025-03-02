@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,16 +30,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
     setIsConverting(true);
     
-    // Read the file content
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const xmlContent = e.target?.result as string;
         
-        // Convert XML to CSV
         const csvString = convertXMLToCSV(xmlContent);
         
-        // Create a Blob with HTML formatting for Excel
         const htmlPrefix = 
           `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
           <head>
@@ -76,14 +72,20 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               .material {
                 background-color: #FDE1D3;
               }
-              .edges {
-                background-color: #F2FCE2;
+              .comp {
+                background-color: #FDE1D3;
+              }
+              .larg {
+                background-color: #D3E4FD;
+              }
+              .borda-inf, .borda-sup {
+                background-color: #FDE1D3;
+              }
+              .borda-dir, .borda-esq {
+                background-color: #D3E4FD;
               }
               .edge-color {
                 background-color: #FEF7CD;
-              }
-              .dimensions {
-                background-color: #D3E4FD;
               }
             </style>
           </head>
@@ -92,10 +94,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         
         const htmlSuffix = `</table></body></html>`;
         
-        // Create a Blob with the HTML content
         const blob = new Blob([htmlPrefix + csvString + htmlSuffix], { type: 'application/vnd.ms-excel;charset=utf-8;' });
         
-        // Create a link and trigger the download
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `${outputFileName}.xls`;
@@ -134,11 +134,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   
   const convertXMLToCSV = (xmlContent: string): string => {
     try {
-      // Parse XML
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
       
-      // Prepare the HTML table content, starting with headers
       let csvContent = 
         `<tr>
           <th>NUM.</th>
@@ -147,19 +145,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th>AMBIENTE</th>
           <th class="piece-desc">DESC. DA PEÇA</th>
           <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-          <th class="dimensions">COMP</th>
-          <th class="dimensions">LARG</th>
+          <th class="comp">COMP</th>
+          <th class="larg">LARG</th>
           <th>QUANT</th>
-          <th class="edges">BORDA INF</th>
-          <th class="edges">BORDA SUP</th>
-          <th class="edges">BORDA DIR</th>
-          <th class="edges">BORDA ESQ</th>
+          <th class="borda-inf">BORDA INF</th>
+          <th class="borda-sup">BORDA SUP</th>
+          <th class="borda-dir">BORDA DIR</th>
+          <th class="borda-esq">BORDA ESQ</th>
           <th class="edge-color">COR FITA DE BORDA</th>
           <th class="material">CHAPA</th>
           <th class="material">ESP.</th>
         </tr>`;
       
-      // First try to parse ITEM tags (new format)
       const itemElements = xmlDoc.querySelectorAll('ITEM');
       
       if (itemElements.length > 0) {
@@ -174,12 +171,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const quantity = item.getAttribute('QUANTITY') || '1';
           const family = item.getAttribute('FAMILY') || '';
           
-          // Get material and color from references
           let material = '';
           let color = '';
           let thickness = '';
           
-          // Try to find REFERENCES section inside the ITEM
           const referencesElements = item.querySelectorAll('REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > THICKNESS');
           
           referencesElements.forEach(ref => {
@@ -195,7 +190,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
           });
           
-          // Get edge banding information - using X instead of "Sim" and empty string instead of "Não"
           let edgeBottom = '';
           let edgeTop = '';
           let edgeRight = '';
@@ -218,14 +212,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
           });
           
-          // Get edge band color
-          let edgeColor = color; // Default to the same color as the piece
+          let edgeColor = color;
           const edgeColorElement = item.querySelector('REFERENCES > MODEL_DESCRIPTION_FITA');
           if (edgeColorElement) {
             edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
           }
           
-          // Add row to HTML table
           csvContent += 
             `<tr>
               <td>${rowCount}</td>
@@ -234,13 +226,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td>Ambiente</td>
               <td class="piece-desc">${escapeHtml(description)}</td>
               <td class="piece-desc">${escapeHtml(observations)}</td>
-              <td class="dimensions">${depth}</td>
-              <td class="dimensions">${width}</td>
+              <td class="comp">${depth}</td>
+              <td class="larg">${width}</td>
               <td>${quantity}</td>
-              <td class="edges">${edgeBottom}</td>
-              <td class="edges">${edgeTop}</td>
-              <td class="edges">${edgeRight}</td>
-              <td class="edges">${edgeLeft}</td>
+              <td class="borda-inf">${edgeBottom}</td>
+              <td class="borda-sup">${edgeTop}</td>
+              <td class="borda-dir">${edgeRight}</td>
+              <td class="borda-esq">${edgeLeft}</td>
               <td class="edge-color">${escapeHtml(edgeColor)}</td>
               <td class="material">${escapeHtml(material)}</td>
               <td class="material">${thickness}</td>
@@ -252,11 +244,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         return csvContent;
       }
       
-      // If no ITEM tags, try the previous format with model categories
       const modelCategories = Array.from(xmlDoc.querySelectorAll('MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation'));
       
       if (modelCategories.length === 0) {
-        // If no categories found, create a simple sample row
         csvContent += 
           `<tr>
             <td>1</td>
@@ -265,13 +255,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td>Exemplo</td>
             <td class="piece-desc">Exemplo Peça</td>
             <td class="piece-desc">Observações Exemplo</td>
-            <td class="dimensions">100</td>
-            <td class="dimensions">50</td>
+            <td class="comp">100</td>
+            <td class="larg">50</td>
             <td>2</td>
-            <td class="edges">X</td>
-            <td class="edges"></td>
-            <td class="edges">X</td>
-            <td class="edges"></td>
+            <td class="borda-inf">X</td>
+            <td class="borda-sup"></td>
+            <td class="borda-dir">X</td>
+            <td class="borda-esq"></td>
             <td class="edge-color">Branco</td>
             <td class="material">Chapa Exemplo</td>
             <td class="material">Espessura Exemplo</td>
@@ -284,13 +274,11 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       modelCategories.forEach(category => {
         const categoryDesc = category.getAttribute('DESCRIPTION') || category.getAttribute('Description') || 'Unknown Category';
         
-        // Find all model information elements within this category
         const modelInfos = Array.from(category.querySelectorAll('MODELINFORMATION, ModelInformation, modelinformation'));
         
         modelInfos.forEach(modelInfo => {
           const modelDesc = modelInfo.getAttribute('DESCRIPTION') || modelInfo.getAttribute('Description') || 'Unknown Model';
           
-          // Add row to HTML table
           csvContent += 
             `<tr>
               <td>${rowCount}</td>
@@ -299,13 +287,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td>${escapeHtml(categoryDesc)}</td>
               <td class="piece-desc">${escapeHtml(modelDesc)}</td>
               <td class="piece-desc">Observações Exemplo</td>
-              <td class="dimensions">100</td>
-              <td class="dimensions">50</td>
+              <td class="comp">100</td>
+              <td class="larg">50</td>
               <td>2</td>
-              <td class="edges">X</td>
-              <td class="edges"></td>
-              <td class="edges">X</td>
-              <td class="edges"></td>
+              <td class="borda-inf">X</td>
+              <td class="borda-sup"></td>
+              <td class="borda-dir">X</td>
+              <td class="borda-esq"></td>
               <td class="edge-color">Branco</td>
               <td class="material">Chapa Exemplo</td>
               <td class="material">Espessura Exemplo</td>
@@ -315,7 +303,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       });
       
       if (rowCount === 1) {
-        // Add a sample row if no data was found
         csvContent += 
           `<tr>
             <td>1</td>
@@ -324,13 +311,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td>Exemplo</td>
             <td class="piece-desc">Exemplo Peça</td>
             <td class="piece-desc">Observações Exemplo</td>
-            <td class="dimensions">100</td>
-            <td class="dimensions">50</td>
+            <td class="comp">100</td>
+            <td class="larg">50</td>
             <td>2</td>
-            <td class="edges">X</td>
-            <td class="edges"></td>
-            <td class="edges">X</td>
-            <td class="edges"></td>
+            <td class="borda-inf">X</td>
+            <td class="borda-sup"></td>
+            <td class="borda-dir">X</td>
+            <td class="borda-esq"></td>
             <td class="edge-color">Branco</td>
             <td class="material">Chapa Exemplo</td>
             <td class="material">Espessura Exemplo</td>
@@ -341,7 +328,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
     } catch (error) {
       console.error('Error converting XML to CSV:', error);
-      // Return a basic CSV with just headers if there's an error
       return `<tr>
         <th>NUM.</th>
         <th>MÓDULO</th>
@@ -349,13 +335,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th>AMBIENTE</th>
         <th class="piece-desc">DESC. DA PEÇA</th>
         <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-        <th class="dimensions">COMP</th>
-        <th class="dimensions">LARG</th>
+        <th class="comp">COMP</th>
+        <th class="larg">LARG</th>
         <th>QUANT</th>
-        <th class="edges">BORDA INF</th>
-        <th class="edges">BORDA SUP</th>
-        <th class="edges">BORDA DIR</th>
-        <th class="edges">BORDA ESQ</th>
+        <th class="borda-inf">BORDA INF</th>
+        <th class="borda-sup">BORDA SUP</th>
+        <th class="borda-dir">BORDA DIR</th>
+        <th class="borda-esq">BORDA ESQ</th>
         <th class="edge-color">COR FITA DE BORDA</th>
         <th class="material">CHAPA</th>
         <th class="material">ESP.</th>
@@ -363,7 +349,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
   };
   
-  // Helper function to escape HTML special characters
   const escapeHtml = (unsafe: string): string => {
     return unsafe
       .replace(/&/g, "&amp;")
@@ -429,4 +414,3 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 };
 
 export default ConverterForm;
-
