@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -167,10 +168,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const description = item.getAttribute('DESCRIPTION') || '';
           const observations = item.getAttribute('OBSERVATIONS') || '';
           const width = item.getAttribute('WIDTH') || '';
+          const height = item.getAttribute('HEIGHT') || '';
           const depth = item.getAttribute('DEPTH') || '';
           const quantity = item.getAttribute('QUANTITY') || '1';
           const repetition = item.getAttribute('REPETITION') || '1';
           const family = item.getAttribute('FAMILY') || '';
+          const reference = item.getAttribute('REFERENCE') || '';
+          const uniqueId = item.getAttribute('UNIQUEID') || '';
           
           // Skip accessories, hardware, production processes, and handles
           if (family.toLowerCase().includes('acessório') || 
@@ -180,6 +184,11 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               family.toLowerCase().includes('puxador')) {
             return; // Skip this item
           }
+          
+          // Format module information in the required format: (ID) - Description - LxAxP
+          const moduleInfo = uniqueId && description ? 
+            `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm` : 
+            family;
           
           let material = '';
           let color = '';
@@ -234,7 +243,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           csvContent += 
             `<tr>
               <td>${rowCount}</td>
-              <td>${escapeHtml(family)}</td>
+              <td>${escapeHtml(moduleInfo)}</td>
               <td>Cliente</td>
               <td>Ambiente</td>
               <td class="piece-desc">${escapeHtml(description)}</td>
