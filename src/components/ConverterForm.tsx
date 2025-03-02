@@ -131,7 +131,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     
     reader.readAsText(xmlFile);
   };
-  
+
   const convertXMLToCSV = (xmlContent: string): string => {
     try {
       const parser = new DOMParser();
@@ -145,13 +145,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th>AMBIENTE</th>
           <th class="piece-desc">DESC. DA PEÇA</th>
           <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-          <th class="comp">COMP</th>
-          <th class="larg">LARG</th>
+          <th style="background-color: #FDE1D3;" class="comp">COMP</th>
+          <th style="background-color: #D3E4FD;" class="larg">LARG</th>
           <th>QUANT</th>
-          <th class="borda-inf">BORDA INF</th>
-          <th class="borda-sup">BORDA SUP</th>
-          <th class="borda-dir">BORDA DIR</th>
-          <th class="borda-esq">BORDA ESQ</th>
+          <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
+          <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
+          <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
+          <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
           <th class="edge-color">COR FITA DE BORDA</th>
           <th class="material">CHAPA</th>
           <th class="material">ESP.</th>
@@ -169,7 +169,17 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const width = item.getAttribute('WIDTH') || '';
           const depth = item.getAttribute('DEPTH') || '';
           const quantity = item.getAttribute('QUANTITY') || '1';
+          const repetition = item.getAttribute('REPETITION') || '1';
           const family = item.getAttribute('FAMILY') || '';
+          
+          // Skip accessories, hardware, production processes, and handles
+          if (family.toLowerCase().includes('acessório') || 
+              family.toLowerCase().includes('acessorios') || 
+              family.toLowerCase().includes('ferragem') || 
+              family.toLowerCase().includes('processo') || 
+              family.toLowerCase().includes('puxador')) {
+            return; // Skip this item
+          }
           
           let material = '';
           let color = '';
@@ -218,6 +228,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
           }
           
+          // Calculate total quantity (QUANTITY * REPETITION)
+          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
+          
           csvContent += 
             `<tr>
               <td>${rowCount}</td>
@@ -228,7 +241,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="piece-desc">${escapeHtml(observations)}</td>
               <td class="comp">${depth}</td>
               <td class="larg">${width}</td>
-              <td>${quantity}</td>
+              <td>${totalQuantity}</td>
               <td class="borda-inf">${edgeBottom}</td>
               <td class="borda-sup">${edgeTop}</td>
               <td class="borda-dir">${edgeRight}</td>
@@ -335,13 +348,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th>AMBIENTE</th>
         <th class="piece-desc">DESC. DA PEÇA</th>
         <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-        <th class="comp">COMP</th>
-        <th class="larg">LARG</th>
+        <th style="background-color: #FDE1D3;" class="comp">COMP</th>
+        <th style="background-color: #D3E4FD;" class="larg">LARG</th>
         <th>QUANT</th>
-        <th class="borda-inf">BORDA INF</th>
-        <th class="borda-sup">BORDA SUP</th>
-        <th class="borda-dir">BORDA DIR</th>
-        <th class="borda-esq">BORDA ESQ</th>
+        <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
+        <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
+        <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
+        <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
         <th class="edge-color">COR FITA DE BORDA</th>
         <th class="material">CHAPA</th>
         <th class="material">ESP.</th>
