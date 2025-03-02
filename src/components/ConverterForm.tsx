@@ -40,14 +40,65 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         // Convert XML to CSV
         const csvString = convertXMLToCSV(xmlContent);
         
-        // Create a Blob with BOM for Excel UTF-8 compatibility
-        const BOM = "\uFEFF"; // UTF-8 BOM character
-        const blob = new Blob([BOM + csvString], { type: 'text/csv;charset=utf-8;' });
+        // Create a Blob with HTML formatting for Excel
+        const htmlPrefix = 
+          `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+            <!--[if gte mso 9]>
+            <xml>
+              <x:ExcelWorkbook>
+                <x:ExcelWorksheets>
+                  <x:ExcelWorksheet>
+                    <x:Name>Planilha</x:Name>
+                    <x:WorksheetOptions>
+                      <x:DisplayGridlines/>
+                    </x:WorksheetOptions>
+                  </x:ExcelWorksheet>
+                </x:ExcelWorksheets>
+              </x:ExcelWorkbook>
+            </xml>
+            <![endif]-->
+            <style>
+              table, td, th {
+                border: 1px solid #000000;
+                border-collapse: collapse;
+                padding: 5px;
+                text-align: center;
+              }
+              th {
+                background-color: #f0f0f0;
+                font-weight: bold;
+              }
+              .piece-desc {
+                background-color: #E5DEFF;
+              }
+              .material {
+                background-color: #FDE1D3;
+              }
+              .edges {
+                background-color: #F2FCE2;
+              }
+              .edge-color {
+                background-color: #FEF7CD;
+              }
+              .dimensions {
+                background-color: #D3E4FD;
+              }
+            </style>
+          </head>
+          <body>
+            <table border="1">`;
+        
+        const htmlSuffix = `</table></body></html>`;
+        
+        // Create a Blob with the HTML content
+        const blob = new Blob([htmlPrefix + csvString + htmlSuffix], { type: 'application/vnd.ms-excel;charset=utf-8;' });
         
         // Create a link and trigger the download
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `${outputFileName}.csv`;
+        link.download = `${outputFileName}.xls`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -87,8 +138,26 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
       
-      // Prepare the CSV content, starting with headers
-      let csvContent = "NUM.;MÓDULO;CLIENTE;AMBIENTE;DESC. DA PEÇA;OBSERVAÇÕES DA PEÇA;COMP;LARG;QUANT;BORDA INF;BORDA SUP;BORDA DIR;BORDA ESQ;COR FITA DE BORDA;CHAPA;ESP.\n";
+      // Prepare the HTML table content, starting with headers
+      let csvContent = 
+        `<tr>
+          <th>NUM.</th>
+          <th>MÓDULO</th>
+          <th>CLIENTE</th>
+          <th>AMBIENTE</th>
+          <th class="piece-desc">DESC. DA PEÇA</th>
+          <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
+          <th class="dimensions">COMP</th>
+          <th class="dimensions">LARG</th>
+          <th>QUANT</th>
+          <th class="edges">BORDA INF</th>
+          <th class="edges">BORDA SUP</th>
+          <th class="edges">BORDA DIR</th>
+          <th class="edges">BORDA ESQ</th>
+          <th class="edge-color">COR FITA DE BORDA</th>
+          <th class="material">CHAPA</th>
+          <th class="material">ESP.</th>
+        </tr>`;
       
       // First try to parse ITEM tags (new format)
       const itemElements = xmlDoc.querySelectorAll('ITEM');
@@ -156,25 +225,26 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
           }
           
-          // Add row to CSV
-          csvContent += formatCSVRow([
-            rowCount.toString(),          // NUM.
-            family,                       // MÓDULO
-            'Cliente',                    // CLIENTE (can be customized)
-            'Ambiente',                   // AMBIENTE
-            description,                  // DESC. DA PEÇA
-            observations,                 // OBSERVAÇÕES DA PEÇA
-            depth,                        // COMP
-            width,                        // LARG
-            quantity,                     // QUANT
-            edgeBottom,                   // BORDA INF
-            edgeTop,                      // BORDA SUP
-            edgeRight,                    // BORDA DIR
-            edgeLeft,                     // BORDA ESQ
-            edgeColor,                    // COR FITA DE BORDA
-            material,                     // CHAPA
-            thickness                     // ESP.
-          ]);
+          // Add row to HTML table
+          csvContent += 
+            `<tr>
+              <td>${rowCount}</td>
+              <td>${escapeHtml(family)}</td>
+              <td>Cliente</td>
+              <td>Ambiente</td>
+              <td class="piece-desc">${escapeHtml(description)}</td>
+              <td class="piece-desc">${escapeHtml(observations)}</td>
+              <td class="dimensions">${depth}</td>
+              <td class="dimensions">${width}</td>
+              <td>${quantity}</td>
+              <td class="edges">${edgeBottom}</td>
+              <td class="edges">${edgeTop}</td>
+              <td class="edges">${edgeRight}</td>
+              <td class="edges">${edgeLeft}</td>
+              <td class="edge-color">${escapeHtml(edgeColor)}</td>
+              <td class="material">${escapeHtml(material)}</td>
+              <td class="material">${thickness}</td>
+            </tr>`;
           
           rowCount++;
         });
@@ -187,7 +257,25 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       if (modelCategories.length === 0) {
         // If no categories found, create a simple sample row
-        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'X', '', 'X', '', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
+        csvContent += 
+          `<tr>
+            <td>1</td>
+            <td>Cozinhas</td>
+            <td>Cliente Exemplo</td>
+            <td>Exemplo</td>
+            <td class="piece-desc">Exemplo Peça</td>
+            <td class="piece-desc">Observações Exemplo</td>
+            <td class="dimensions">100</td>
+            <td class="dimensions">50</td>
+            <td>2</td>
+            <td class="edges">X</td>
+            <td class="edges"></td>
+            <td class="edges">X</td>
+            <td class="edges"></td>
+            <td class="edge-color">Branco</td>
+            <td class="material">Chapa Exemplo</td>
+            <td class="material">Espessura Exemplo</td>
+          </tr>`;
         return csvContent;
       }
       
@@ -201,61 +289,52 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         
         modelInfos.forEach(modelInfo => {
           const modelDesc = modelInfo.getAttribute('DESCRIPTION') || modelInfo.getAttribute('Description') || 'Unknown Model';
-          const modelId = modelInfo.getAttribute('ID') || modelInfo.getAttribute('Id') || '';
           
-          // Find all model type information elements within this model
-          const modelTypes = Array.from(modelInfo.querySelectorAll('MODELTYPEINFORMATION, ModelTypeInformation, modeltypeinformation'));
-          
-          if (modelTypes.length === 0) {
-            // Add a row even if no model types
-            csvContent += formatCSVRow([
-              rowCount.toString(), 
-              'Cozinhas', 
-              'Cliente Exemplo', 
-              categoryDesc, 
-              modelDesc, 
-              'Observações Exemplo', 
-              '100', 
-              '50', 
-              '2', 
-              'X', 
-              '', 
-              'X', 
-              '', 
-              'Branco', 
-              'Chapa Exemplo', 
-              'Espessura Exemplo'
-            ]);
-            rowCount++;
-          } else {
-            modelTypes.forEach(() => {
-              csvContent += formatCSVRow([
-                rowCount.toString(), 
-                'Cozinhas', 
-                'Cliente Exemplo', 
-                categoryDesc, 
-                modelDesc, 
-                'Observações Exemplo', 
-                '100', 
-                '50', 
-                '2', 
-                'X', 
-                '', 
-                'X', 
-                '', 
-                'Branco', 
-                'Chapa Exemplo', 
-                'Espessura Exemplo'
-              ]);
-              rowCount++;
-            });
-          }
+          // Add row to HTML table
+          csvContent += 
+            `<tr>
+              <td>${rowCount}</td>
+              <td>Cozinhas</td>
+              <td>Cliente Exemplo</td>
+              <td>${escapeHtml(categoryDesc)}</td>
+              <td class="piece-desc">${escapeHtml(modelDesc)}</td>
+              <td class="piece-desc">Observações Exemplo</td>
+              <td class="dimensions">100</td>
+              <td class="dimensions">50</td>
+              <td>2</td>
+              <td class="edges">X</td>
+              <td class="edges"></td>
+              <td class="edges">X</td>
+              <td class="edges"></td>
+              <td class="edge-color">Branco</td>
+              <td class="material">Chapa Exemplo</td>
+              <td class="material">Espessura Exemplo</td>
+            </tr>`;
+          rowCount++;
         });
       });
       
       if (rowCount === 1) {
         // Add a sample row if no data was found
-        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'X', '', 'X', '', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
+        csvContent += 
+          `<tr>
+            <td>1</td>
+            <td>Cozinhas</td>
+            <td>Cliente Exemplo</td>
+            <td>Exemplo</td>
+            <td class="piece-desc">Exemplo Peça</td>
+            <td class="piece-desc">Observações Exemplo</td>
+            <td class="dimensions">100</td>
+            <td class="dimensions">50</td>
+            <td>2</td>
+            <td class="edges">X</td>
+            <td class="edges"></td>
+            <td class="edges">X</td>
+            <td class="edges"></td>
+            <td class="edge-color">Branco</td>
+            <td class="material">Chapa Exemplo</td>
+            <td class="material">Espessura Exemplo</td>
+          </tr>`;
       }
       
       return csvContent;
@@ -263,23 +342,35 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     } catch (error) {
       console.error('Error converting XML to CSV:', error);
       // Return a basic CSV with just headers if there's an error
-      return "NUM.;MÓDULO;CLIENTE;AMBIENTE;DESC. DA PEÇA;OBSERVAÇÕES DA PEÇA;COMP;LARG;QUANT;BORDA INF;BORDA SUP;BORDA DIR;BORDA ESQ;COR FITA DE BORDA;CHAPA;ESP.\n";
+      return `<tr>
+        <th>NUM.</th>
+        <th>MÓDULO</th>
+        <th>CLIENTE</th>
+        <th>AMBIENTE</th>
+        <th class="piece-desc">DESC. DA PEÇA</th>
+        <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
+        <th class="dimensions">COMP</th>
+        <th class="dimensions">LARG</th>
+        <th>QUANT</th>
+        <th class="edges">BORDA INF</th>
+        <th class="edges">BORDA SUP</th>
+        <th class="edges">BORDA DIR</th>
+        <th class="edges">BORDA ESQ</th>
+        <th class="edge-color">COR FITA DE BORDA</th>
+        <th class="material">CHAPA</th>
+        <th class="material">ESP.</th>
+      </tr>`;
     }
   };
   
-  const formatCSVRow = (values: string[]): string => {
-    // Format values for Excel CSV standard - using semicolons as separators and double-quotes for text fields
-    const formattedValues = values.map(value => {
-      // Check if value contains special characters that require quotes
-      if (value.includes(';') || value.includes('"') || value.includes('\n') || value.includes(',')) {
-        // Escape double quotes by doubling them and wrap in quotes
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    });
-    
-    // Join with semicolons (better Excel compatibility in many locales, especially Brazil)
-    return formattedValues.join(';') + '\n';
+  // Helper function to escape HTML special characters
+  const escapeHtml = (unsafe: string): string => {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   };
 
   return (
@@ -338,3 +429,4 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 };
 
 export default ConverterForm;
+
