@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -155,10 +154,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
           <th class="edge-color">COR FITA DE BORDA</th>
           <th class="material">CHAPA</th>
+          <th class="material">COR</th>
           <th class="material">ESP.</th>
-          <th class="material">POSIÇÃO</th>
-          <th class="material">RODAPÉ</th>
-          <th class="material">LINHA</th>
         </tr>`;
       
       const itemElements = xmlDoc.querySelectorAll('ITEM');
@@ -179,16 +176,14 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const reference = item.getAttribute('REFERENCE') || '';
           const uniqueId = item.getAttribute('UNIQUEID') || '';
           
-          // Skip accessories, hardware, production processes, and handles
           if (family.toLowerCase().includes('acessório') || 
               family.toLowerCase().includes('acessorios') || 
               family.toLowerCase().includes('ferragem') || 
               family.toLowerCase().includes('processo') || 
               family.toLowerCase().includes('puxador')) {
-            return; // Skip this item
+            return;
           }
           
-          // Format module information in the required format: (ID) - Description - LxAxP
           const moduleInfo = uniqueId && description ? 
             `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm` : 
             family;
@@ -196,9 +191,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           let material = '';
           let color = '';
           let thickness = '';
-          let position = '';
-          let baseBoard = '';
-          let line = '';
           let sheetWidth = '';
           let sheetHeight = '';
           
@@ -214,12 +206,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               color = referenceValue;
             } else if (tagName === 'THICKNESS') {
               thickness = referenceValue;
-            } else if (tagName === 'POSICAO') {
-              position = referenceValue;
-            } else if (tagName === 'RODAPE') {
-              baseBoard = referenceValue === 'True' ? 'Sim' : 'Não';
-            } else if (tagName === 'LINE') {
-              line = referenceValue;
             } else if (tagName === 'LARGURA_CHAPA') {
               sheetWidth = referenceValue;
             } else if (tagName === 'ALTURA_CHAPA') {
@@ -255,7 +241,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
           }
           
-          // Calculate total quantity (QUANTITY * REPETITION)
           const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
           
           csvContent += 
@@ -275,10 +260,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="borda-esq">${edgeLeft}</td>
               <td class="edge-color">${escapeHtml(edgeColor)}</td>
               <td class="material">${escapeHtml(material)}</td>
+              <td class="material">${escapeHtml(color)}</td>
               <td class="material">${thickness}</td>
-              <td class="material">${position}</td>
-              <td class="material">${baseBoard}</td>
-              <td class="material">${line}</td>
             </tr>`;
           
           rowCount++;
@@ -307,10 +290,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="borda-esq"></td>
             <td class="edge-color">Branco</td>
             <td class="material">Chapa Exemplo</td>
+            <td class="material">Branco</td>
             <td class="material">Espessura Exemplo</td>
-            <td class="material">Dir</td>
-            <td class="material">Sim</td>
-            <td class="material">Cores</td>
           </tr>`;
         return csvContent;
       }
@@ -342,10 +323,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="borda-esq"></td>
               <td class="edge-color">Branco</td>
               <td class="material">Chapa Exemplo</td>
+              <td class="material">Branco</td>
               <td class="material">Espessura Exemplo</td>
-              <td class="material">Dir</td>
-              <td class="material">Sim</td>
-              <td class="material">Cores</td>
             </tr>`;
           rowCount++;
         });
@@ -369,10 +348,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="borda-esq"></td>
             <td class="edge-color">Branco</td>
             <td class="material">Chapa Exemplo</td>
+            <td class="material">Branco</td>
             <td class="material">Espessura Exemplo</td>
-            <td class="material">Dir</td>
-            <td class="material">Sim</td>
-            <td class="material">Cores</td>
           </tr>`;
       }
       
@@ -396,10 +373,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
         <th class="edge-color">COR FITA DE BORDA</th>
         <th class="material">CHAPA</th>
+        <th class="material">COR</th>
         <th class="material">ESP.</th>
-        <th class="material">POSIÇÃO</th>
-        <th class="material">RODAPÉ</th>
-        <th class="material">LINHA</th>
       </tr>`;
     }
   };
