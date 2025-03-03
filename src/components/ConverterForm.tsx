@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -159,6 +158,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     }
   };
 
+  const extractPieceInfo = (description: string, uniqueId: string): string => {
+    // Get reference number and piece name
+    let formattedDesc = description;
+    
+    // If we have a uniqueId, add it as a reference number
+    if (uniqueId) {
+      formattedDesc = `Ref.${uniqueId} - ${description}`;
+    }
+    
+    return formattedDesc;
+  };
+
   const convertXMLToCSV = (xmlContent: string): string => {
     try {
       const parser = new DOMParser();
@@ -191,23 +202,20 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       // Count piece types
       const pieceTypeCount: Record<string, number> = {};
       
+      // Group items by module for the cutting plan
+      const moduleGroups: Record<string, any[]> = {};
+      
       if (itemElements.length > 0) {
         let csvContent = headerRow;
         let rowCount = 1;
         
+        // First, group all items by module
         itemElements.forEach(item => {
-          const id = item.getAttribute('ID') || '';
-          const description = item.getAttribute('DESCRIPTION') || '';
-          const observations = item.getAttribute('OBSERVATIONS') || '';
-          const width = item.getAttribute('WIDTH') || '';
-          const height = item.getAttribute('HEIGHT') || '';
-          const depth = item.getAttribute('DEPTH') || '';
-          const quantity = item.getAttribute('QUANTITY') || '1';
-          const repetition = item.getAttribute('REPETITION') || '1';
-          const family = item.getAttribute('FAMILY') || '';
-          const reference = item.getAttribute('REFERENCE') || '';
           const uniqueId = item.getAttribute('UNIQUEID') || '';
+          const description = item.getAttribute('DESCRIPTION') || '';
           
+          // Skip accessories and hardware
+          const family = item.getAttribute('FAMILY') || '';
           if (family.toLowerCase().includes('acessório') || 
               family.toLowerCase().includes('acessorios') || 
               family.toLowerCase().includes('ferragem') || 
@@ -216,98 +224,137 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             return;
           }
           
-          const moduleInfo = uniqueId && description ? 
-            `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm` : 
-            family;
+          // Use uniqueId as the module identifier, or fall back to description if needed
+          const moduleKey = uniqueId || description || 'unknown_module';
           
-          let material = '';
-          let color = '';
-          let thickness = '';
-          let sheetWidth = '';
-          let sheetHeight = '';
-          
-          const referencesElements = item.querySelectorAll('REFERENCES > *');
-          
-          referencesElements.forEach(ref => {
-            const tagName = ref.tagName;
-            const referenceValue = ref.getAttribute('REFERENCE') || '';
-            
-            if (tagName === 'MATERIAL') {
-              material = referenceValue;
-            } else if (tagName === 'MODEL' || tagName === 'MODEL_DESCRIPTION') {
-              color = referenceValue;
-            } else if (tagName === 'THICKNESS') {
-              thickness = referenceValue;
-            } else if (tagName === 'LARGURA_CHAPA') {
-              sheetWidth = referenceValue;
-            } else if (tagName === 'ALTURA_CHAPA') {
-              sheetHeight = referenceValue;
-            }
-          });
-          
-          let edgeBottom = '';
-          let edgeTop = '';
-          let edgeRight = '';
-          let edgeLeft = '';
-          
-          const edgeElements = item.querySelectorAll('REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4');
-          
-          edgeElements.forEach(edge => {
-            const tagName = edge.tagName;
-            const value = edge.getAttribute('REFERENCE') || '0';
-            
-            if (tagName === 'FITA_BORDA_1') {
-              edgeBottom = value === '1' ? 'X' : '';
-            } else if (tagName === 'FITA_BORDA_2') {
-              edgeTop = value === '1' ? 'X' : '';
-            } else if (tagName === 'FITA_BORDA_3') {
-              edgeRight = value === '1' ? 'X' : '';
-            } else if (tagName === 'FITA_BORDA_4') {
-              edgeLeft = value === '1' ? 'X' : '';
-            }
-          });
-          
-          let edgeColor = color;
-          const edgeColorElement = item.querySelector('REFERENCES > MODEL_DESCRIPTION_FITA');
-          if (edgeColorElement) {
-            edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
+          if (!moduleGroups[moduleKey]) {
+            moduleGroups[moduleKey] = [];
           }
           
-          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
-          
-          // Identificar o tipo de peça
-          const pieceType = identifyPieceType(description);
-          
-          // Contar peças por tipo
-          if (pieceTypeCount[pieceType]) {
-            pieceTypeCount[pieceType] += totalQuantity;
-          } else {
-            pieceTypeCount[pieceType] = totalQuantity;
-          }
-          
-          csvContent += 
-            `<tr>
-              <td>${rowCount}</td>
-              <td>${escapeHtml(moduleInfo)}</td>
-              <td>Cliente</td>
-              <td>Ambiente</td>
-              <td class="piece-desc">${escapeHtml(description)}</td>
-              <td class="piece-desc">${pieceType}</td>
-              <td class="piece-desc">${escapeHtml(observations)}</td>
-              <td class="comp">${depth}</td>
-              <td class="larg">${width}</td>
-              <td>${totalQuantity}</td>
-              <td class="borda-inf">${edgeBottom}</td>
-              <td class="borda-sup">${edgeTop}</td>
-              <td class="borda-dir">${edgeRight}</td>
-              <td class="borda-esq">${edgeLeft}</td>
-              <td class="edge-color">${escapeHtml(edgeColor)}</td>
-              <td class="material">${escapeHtml(material)}</td>
-              <td class="material">${escapeHtml(color)}</td>
-              <td class="material">${thickness}</td>
+          moduleGroups[moduleKey].push(item);
+        });
+        
+        // Then process each module group
+        Object.entries(moduleGroups).forEach(([moduleKey, moduleItems]) => {
+          // Add a module header if we have multiple modules
+          if (Object.keys(moduleGroups).length > 1) {
+            csvContent += `<tr>
+              <td colspan="18" style="text-align: center; font-weight: bold; background-color: #e0e0e0;">
+                MÓDULO: ${escapeHtml(moduleKey)}
+              </td>
             </tr>`;
+          }
           
-          rowCount++;
+          // Process each item in the module
+          moduleItems.forEach(item => {
+            const id = item.getAttribute('ID') || '';
+            const description = item.getAttribute('DESCRIPTION') || '';
+            const observations = item.getAttribute('OBSERVATIONS') || '';
+            const width = item.getAttribute('WIDTH') || '';
+            const height = item.getAttribute('HEIGHT') || '';
+            const depth = item.getAttribute('DEPTH') || '';
+            const quantity = item.getAttribute('QUANTITY') || '1';
+            const repetition = item.getAttribute('REPETITION') || '1';
+            const family = item.getAttribute('FAMILY') || '';
+            const reference = item.getAttribute('REFERENCE') || '';
+            const uniqueId = item.getAttribute('UNIQUEID') || '';
+            
+            const moduleInfo = uniqueId && description ? 
+              `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm` : 
+              family;
+            
+            let material = '';
+            let color = '';
+            let thickness = '';
+            let sheetWidth = '';
+            let sheetHeight = '';
+            
+            const referencesElements = item.querySelectorAll('REFERENCES > *');
+            
+            referencesElements.forEach(ref => {
+              const tagName = ref.tagName;
+              const referenceValue = ref.getAttribute('REFERENCE') || '';
+              
+              if (tagName === 'MATERIAL') {
+                material = referenceValue;
+              } else if (tagName === 'MODEL' || tagName === 'MODEL_DESCRIPTION') {
+                color = referenceValue;
+              } else if (tagName === 'THICKNESS') {
+                thickness = referenceValue;
+              } else if (tagName === 'LARGURA_CHAPA') {
+                sheetWidth = referenceValue;
+              } else if (tagName === 'ALTURA_CHAPA') {
+                sheetHeight = referenceValue;
+              }
+            });
+            
+            let edgeBottom = '';
+            let edgeTop = '';
+            let edgeRight = '';
+            let edgeLeft = '';
+            
+            const edgeElements = item.querySelectorAll('REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4');
+            
+            edgeElements.forEach(edge => {
+              const tagName = edge.tagName;
+              const value = edge.getAttribute('REFERENCE') || '0';
+              
+              if (tagName === 'FITA_BORDA_1') {
+                edgeBottom = value === '1' ? 'X' : '';
+              } else if (tagName === 'FITA_BORDA_2') {
+                edgeTop = value === '1' ? 'X' : '';
+              } else if (tagName === 'FITA_BORDA_3') {
+                edgeRight = value === '1' ? 'X' : '';
+              } else if (tagName === 'FITA_BORDA_4') {
+                edgeLeft = value === '1' ? 'X' : '';
+              }
+            });
+            
+            let edgeColor = color;
+            const edgeColorElement = item.querySelector('REFERENCES > MODEL_DESCRIPTION_FITA');
+            if (edgeColorElement) {
+              edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
+            }
+            
+            const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
+            
+            // Identificar o tipo de peça
+            const pieceType = identifyPieceType(description);
+            
+            // Format the piece description with reference number and more detailed info
+            const formattedDescription = extractPieceInfo(description, uniqueId);
+            
+            // Contar peças por tipo
+            if (pieceTypeCount[pieceType]) {
+              pieceTypeCount[pieceType] += totalQuantity;
+            } else {
+              pieceTypeCount[pieceType] = totalQuantity;
+            }
+            
+            csvContent += 
+              `<tr>
+                <td>${rowCount}</td>
+                <td>${escapeHtml(moduleInfo)}</td>
+                <td>Cliente</td>
+                <td>Ambiente</td>
+                <td class="piece-desc">${escapeHtml(formattedDescription)}</td>
+                <td class="piece-desc">${pieceType}</td>
+                <td class="piece-desc">${escapeHtml(observations)}</td>
+                <td class="comp">${depth}</td>
+                <td class="larg">${width}</td>
+                <td>${totalQuantity}</td>
+                <td class="borda-inf">${edgeBottom}</td>
+                <td class="borda-sup">${edgeTop}</td>
+                <td class="borda-dir">${edgeRight}</td>
+                <td class="borda-esq">${edgeLeft}</td>
+                <td class="edge-color">${escapeHtml(edgeColor)}</td>
+                <td class="material">${escapeHtml(material)}</td>
+                <td class="material">${escapeHtml(color)}</td>
+                <td class="material">${thickness}</td>
+              </tr>`;
+            
+            rowCount++;
+          });
         });
         
         // Adicionar resumo de quantidade por tipo
