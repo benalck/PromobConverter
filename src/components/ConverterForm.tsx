@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -132,18 +133,45 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     reader.readAsText(xmlFile);
   };
 
+  const identifyPieceType = (description: string): string => {
+    const desc = description.toLowerCase();
+    
+    if (desc.includes('lateral') || desc.includes('lat.')) {
+      return 'Lateral';
+    } else if (desc.includes('base') || desc.includes('fundo')) {
+      return 'Base';
+    } else if (desc.includes('prateleira') || desc.includes('prat.')) {
+      return 'Prateleira';
+    } else if (desc.includes('porta') || desc.includes('port.')) {
+      return 'Porta';
+    } else if (desc.includes('gaveta') || desc.includes('gav.')) {
+      return 'Gaveta';
+    } else if (desc.includes('tampo') || desc.includes('top')) {
+      return 'Tampo';
+    } else if (desc.includes('frente') || desc.includes('front')) {
+      return 'Frente';
+    } else if (desc.includes('costa') || desc.includes('back')) {
+      return 'Costa';
+    } else if (desc.includes('divisoria') || desc.includes('div.')) {
+      return 'Divisória';
+    } else {
+      return 'Outro';
+    }
+  };
+
   const convertXMLToCSV = (xmlContent: string): string => {
     try {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
       
-      let csvContent = 
+      let headerRow = 
         `<tr>
           <th>NUM.</th>
           <th>MÓDULO</th>
           <th>CLIENTE</th>
           <th>AMBIENTE</th>
           <th class="piece-desc">DESC. DA PEÇA</th>
+          <th class="piece-desc">TIPO</th>
           <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
           <th style="background-color: #FDE1D3;" class="comp">COMP</th>
           <th style="background-color: #D3E4FD;" class="larg">LARG</th>
@@ -160,7 +188,11 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       const itemElements = xmlDoc.querySelectorAll('ITEM');
       
+      // Count piece types
+      const pieceTypeCount: Record<string, number> = {};
+      
       if (itemElements.length > 0) {
+        let csvContent = headerRow;
         let rowCount = 1;
         
         itemElements.forEach(item => {
@@ -243,6 +275,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           
           const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
           
+          // Identificar o tipo de peça
+          const pieceType = identifyPieceType(description);
+          
+          // Contar peças por tipo
+          if (pieceTypeCount[pieceType]) {
+            pieceTypeCount[pieceType] += totalQuantity;
+          } else {
+            pieceTypeCount[pieceType] = totalQuantity;
+          }
+          
           csvContent += 
             `<tr>
               <td>${rowCount}</td>
@@ -250,6 +292,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td>Cliente</td>
               <td>Ambiente</td>
               <td class="piece-desc">${escapeHtml(description)}</td>
+              <td class="piece-desc">${pieceType}</td>
               <td class="piece-desc">${escapeHtml(observations)}</td>
               <td class="comp">${depth}</td>
               <td class="larg">${width}</td>
@@ -267,12 +310,23 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           rowCount++;
         });
         
+        // Adicionar resumo de quantidade por tipo
+        csvContent += `<tr><td colspan="18" style="text-align: left; font-weight: bold; background-color: #f0f0f0;">Resumo de Quantidades por Tipo:</td></tr>`;
+        
+        Object.entries(pieceTypeCount).forEach(([type, count]) => {
+          csvContent += `<tr>
+            <td colspan="5" style="text-align: right; font-weight: bold;">${type}:</td>
+            <td colspan="13" style="text-align: left;">${count} unidades</td>
+          </tr>`;
+        });
+        
         return csvContent;
       }
       
       const modelCategories = Array.from(xmlDoc.querySelectorAll('MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation'));
       
       if (modelCategories.length === 0) {
+        let csvContent = headerRow;
         csvContent += 
           `<tr>
             <td>1</td>
@@ -280,6 +334,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td>Cliente Exemplo</td>
             <td>Exemplo</td>
             <td class="piece-desc">Exemplo Peça</td>
+            <td class="piece-desc">Outro</td>
             <td class="piece-desc">Observações Exemplo</td>
             <td class="comp">100</td>
             <td class="larg">50</td>
@@ -296,6 +351,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         return csvContent;
       }
       
+      let csvContent = headerRow;
       let rowCount = 1;
       
       modelCategories.forEach(category => {
@@ -313,6 +369,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td>Cliente Exemplo</td>
               <td>${escapeHtml(categoryDesc)}</td>
               <td class="piece-desc">${escapeHtml(modelDesc)}</td>
+              <td class="piece-desc">Outro</td>
               <td class="piece-desc">Observações Exemplo</td>
               <td class="comp">100</td>
               <td class="larg">50</td>
@@ -338,6 +395,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td>Cliente Exemplo</td>
             <td>Exemplo</td>
             <td class="piece-desc">Exemplo Peça</td>
+            <td class="piece-desc">Outro</td>
             <td class="piece-desc">Observações Exemplo</td>
             <td class="comp">100</td>
             <td class="larg">50</td>
@@ -363,6 +421,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th>CLIENTE</th>
         <th>AMBIENTE</th>
         <th class="piece-desc">DESC. DA PEÇA</th>
+        <th class="piece-desc">TIPO</th>
         <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
         <th style="background-color: #FDE1D3;" class="comp">COMP</th>
         <th style="background-color: #D3E4FD;" class="larg">LARG</th>
