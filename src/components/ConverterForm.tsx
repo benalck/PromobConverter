@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -132,40 +133,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     reader.readAsText(xmlFile);
   };
 
-  const identifyPieceType = (description: string): string => {
-    const desc = description.toLowerCase();
-    
-    if (desc.includes('lateral') || desc.includes('lat.')) {
-      return 'Lateral';
-    } else if (desc.includes('base') || desc.includes('fundo')) {
-      return 'Base';
-    } else if (desc.includes('prateleira') || desc.includes('prat.')) {
-      return 'Prateleira';
-    } else if (desc.includes('porta') || desc.includes('port.')) {
-      return 'Porta';
-    } else if (desc.includes('gaveta') || desc.includes('gav.')) {
-      return 'Gaveta';
-    } else if (desc.includes('tampo') || desc.includes('top')) {
-      return 'Tampo';
-    } else if (desc.includes('frente') || desc.includes('front')) {
-      return 'Frente';
-    } else if (desc.includes('costa') || desc.includes('back')) {
-      return 'Costa';
-    } else if (desc.includes('divisoria') || desc.includes('div.')) {
-      return 'Divisória';
-    } else {
-      return 'Outro';
-    }
-  };
-
   const extractPieceInfo = (description: string, uniqueId: string): string => {
-    let formattedDesc = description;
-    
+    // Format the description as "UniqueId - Description"
     if (uniqueId) {
-      formattedDesc = `${uniqueId} - ${description}`;
+      return `${uniqueId} - ${description}`;
     }
-    
-    return formattedDesc;
+    return description;
   };
 
   const convertXMLToCSV = (xmlContent: string): string => {
@@ -176,7 +149,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       let headerRow = 
         `<tr>
           <th>NUM.</th>
-          <th>MÓDULO</th>
+          <th>MODULO</th>
           <th>CLIENTE</th>
           <th>AMBIENTE</th>
           <th class="piece-desc">DESC. DA PEÇA</th>
@@ -184,18 +157,9 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           <th style="background-color: #FDE1D3;" class="comp">COMP</th>
           <th style="background-color: #D3E4FD;" class="larg">LARG</th>
           <th>QUANT</th>
-          <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
-          <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
-          <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
-          <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
-          <th class="edge-color">COR FITA DE BORDA</th>
-          <th class="material">CHAPA</th>
-          <th class="material">ESP.</th>
         </tr>`;
       
       const itemElements = xmlDoc.querySelectorAll('ITEM');
-      
-      const pieceTypeCount: Record<string, number> = {};
       
       const moduleGroups: Record<string, any[]> = {};
       
@@ -237,6 +201,8 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             `(${moduleUniqueId}) - ${moduleDescription} - L.${width}mm x A.${height}mm x P.${depth}mm` : 
             '';
           
+          let moduleInfoDisplayed = false;
+          
           moduleItems.forEach((item, itemIndex) => {
             const uniqueId = item.getAttribute('UNIQUEID') || '';
             const description = item.getAttribute('DESCRIPTION') || '';
@@ -247,73 +213,20 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             const quantity = item.getAttribute('QUANTITY') || '1';
             const repetition = item.getAttribute('REPETITION') || '1';
             
-            let material = '';
-            let color = '';
-            let thickness = '';
-            
-            const referencesElements = item.querySelectorAll('REFERENCES > *');
-            
-            referencesElements.forEach(ref => {
-              const tagName = ref.tagName;
-              const referenceValue = ref.getAttribute('REFERENCE') || '';
-              
-              if (tagName === 'MATERIAL') {
-                material = referenceValue;
-              } else if (tagName === 'MODEL' || tagName === 'MODEL_DESCRIPTION') {
-                color = referenceValue;
-              } else if (tagName === 'THICKNESS') {
-                thickness = referenceValue;
-              }
-            });
-            
-            let edgeBottom = '';
-            let edgeTop = '';
-            let edgeRight = '';
-            let edgeLeft = '';
-            
-            const edgeElements = item.querySelectorAll('REFERENCES > FITA_BORDA_1, REFERENCES > FITA_BORDA_2, REFERENCES > FITA_BORDA_3, REFERENCES > FITA_BORDA_4');
-            
-            edgeElements.forEach(edge => {
-              const tagName = edge.tagName;
-              const value = edge.getAttribute('REFERENCE') || '0';
-              
-              if (tagName === 'FITA_BORDA_1') {
-                edgeBottom = value === '1' ? 'X' : '';
-              } else if (tagName === 'FITA_BORDA_2') {
-                edgeTop = value === '1' ? 'X' : '';
-              } else if (tagName === 'FITA_BORDA_3') {
-                edgeRight = value === '1' ? 'X' : '';
-              } else if (tagName === 'FITA_BORDA_4') {
-                edgeLeft = value === '1' ? 'X' : '';
-              }
-            });
-            
-            let edgeColor = color;
-            const edgeColorElement = item.querySelector('REFERENCES > MODEL_DESCRIPTION_FITA');
-            if (edgeColorElement) {
-              edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
-            }
-            
             const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
             
             const formattedDescription = extractPieceInfo(description, uniqueId);
             
-            let formattedMaterial = '';
-            if (material && thickness) {
-              formattedMaterial = `MDF ${thickness} ${color}`;
-            }
-            
-            let displayedModuleInfo = '';
-            if (itemIndex === 0) {
-              displayedModuleInfo = moduleInfo;
-            } else if (itemIndex === 10 && moduleItems.length > 15) {
-              displayedModuleInfo = moduleInfo;
+            // Only display module info in the first row of each module
+            const displayModuleInfo = !moduleInfoDisplayed ? moduleInfo : '';
+            if (!moduleInfoDisplayed) {
+              moduleInfoDisplayed = true;
             }
             
             csvContent += 
               `<tr>
                 <td>${rowCount}</td>
-                <td>${escapeHtml(displayedModuleInfo)}</td>
+                <td>${escapeHtml(displayModuleInfo)}</td>
                 <td></td>
                 <td>Ambiente 3D</td>
                 <td class="piece-desc">${escapeHtml(formattedDescription)}</td>
@@ -321,13 +234,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
                 <td class="comp">${depth}</td>
                 <td class="larg">${width}</td>
                 <td>${totalQuantity}</td>
-                <td class="borda-inf">${edgeBottom}</td>
-                <td class="borda-sup">${edgeTop}</td>
-                <td class="borda-dir">${edgeRight}</td>
-                <td class="borda-esq">${edgeLeft}</td>
-                <td class="edge-color">${escapeHtml(edgeColor)}</td>
-                <td class="material">${escapeHtml(formattedMaterial)}</td>
-                <td class="material">${thickness}</td>
               </tr>`;
             
             rowCount++;
@@ -336,7 +242,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           if (moduleIndex < Object.keys(moduleGroups).length - 1) {
             csvContent += 
               `<tr>
-                <td colspan="16" style="border: none; height: 15px;"></td>
+                <td colspan="9" style="border: none; height: 15px;"></td>
               </tr>`;
           }
         });
@@ -344,6 +250,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         return csvContent;
       }
       
+      // Fallback example data if no items are found
       const modelCategories = Array.from(xmlDoc.querySelectorAll('MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation'));
       
       if (modelCategories.length === 0) {
@@ -359,13 +266,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="comp">470</td>
             <td class="larg">500</td>
             <td>1</td>
-            <td class="borda-inf">X</td>
-            <td class="borda-sup"></td>
-            <td class="borda-dir"></td>
-            <td class="borda-esq"></td>
-            <td class="edge-color">Branco</td>
-            <td class="material">MDF 15 Branco</td>
-            <td class="material">15</td>
           </tr>`;
         return csvContent;
       }
@@ -392,13 +292,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
               <td class="comp">470</td>
               <td class="larg">500</td>
               <td>1</td>
-              <td class="borda-inf">X</td>
-              <td class="borda-sup"></td>
-              <td class="borda-dir"></td>
-              <td class="borda-esq"></td>
-              <td class="edge-color">Branco</td>
-              <td class="material">MDF 15 Branco</td>
-              <td class="material">15</td>
             </tr>`;
           rowCount++;
         });
@@ -416,13 +309,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             <td class="comp">470</td>
             <td class="larg">500</td>
             <td>1</td>
-            <td class="borda-inf">X</td>
-            <td class="borda-sup"></td>
-            <td class="borda-dir"></td>
-            <td class="borda-esq"></td>
-            <td class="edge-color">Branco</td>
-            <td class="material">MDF 15 Branco</td>
-            <td class="material">15</td>
           </tr>`;
       }
       
@@ -432,7 +318,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       console.error('Error converting XML to CSV:', error);
       return `<tr>
         <th>NUM.</th>
-        <th>MÓDULO</th>
+        <th>MODULO</th>
         <th>CLIENTE</th>
         <th>AMBIENTE</th>
         <th class="piece-desc">DESC. DA PEÇA</th>
@@ -440,13 +326,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         <th style="background-color: #FDE1D3;" class="comp">COMP</th>
         <th style="background-color: #D3E4FD;" class="larg">LARG</th>
         <th>QUANT</th>
-        <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
-        <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
-        <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
-        <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
-        <th class="edge-color">COR FITA DE BORDA</th>
-        <th class="material">CHAPA</th>
-        <th class="material">ESP.</th>
       </tr>`;
     }
   };
