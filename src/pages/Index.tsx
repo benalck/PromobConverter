@@ -40,47 +40,47 @@ const Index = () => {
         <section className="py-20 bg-gradient-to-b from-background to-secondary/30">
           <div className="container px-6 mx-auto">
             <div className="section-fade-in mb-12 text-center">
-              <h2 className="text-3xl font-bold tracking-tight mb-4">Effortless Conversion, Perfect Results</h2>
+              <h2 className="text-3xl font-bold tracking-tight mb-4">Conversão Simples, Resultados Perfeitos</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Our intuitive interface makes transforming XML data to formatted Excel spreadsheets simple and efficient.
+                Nossa interface intuitiva torna a transformação de dados XML em planilhas Excel formatadas simples e eficiente.
               </p>
             </div>
             
             <div className="section-fade-in grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <FeatureCard 
                 icon={FileJson}
-                title="XML Processing"
-                description="Parse complex XML structures with precise element and attribute extraction."
+                title="Processamento XML"
+                description="Analise estruturas XML complexas com extração precisa de elementos e atributos."
               />
               
               <FeatureCard 
                 icon={FileSpreadsheet}
-                title="Excel Formatting"
-                description="Generate perfectly formatted Excel spreadsheets with customized column layouts."
+                title="Formatação Excel"
+                description="Gere planilhas Excel perfeitamente formatadas com layouts de colunas personalizados."
               />
               
               <FeatureCard 
                 icon={Upload}
-                title="Drag & Drop"
-                description="Simply drag and drop your XML files for instant conversion."
+                title="Arrastar e Soltar"
+                description="Simplesmente arraste e solte seus arquivos XML para conversão instantânea."
               />
               
               <FeatureCard 
                 icon={Download}
-                title="One-Click Download"
-                description="Download your converted XLSX files instantly with a single click."
+                title="Download com Um Clique"
+                description="Baixe seus arquivos XLSX convertidos instantaneamente com um único clique."
               />
               
               <FeatureCard 
                 icon={CheckCircle}
-                title="Data Integrity"
-                description="Maintain complete data integrity throughout the conversion process."
+                title="Integridade de Dados"
+                description="Mantenha a integridade completa dos dados durante todo o processo de conversão."
               />
               
               <FeatureCard 
                 icon={Settings}
-                title="Customizable"
-                description="Configure column mappings and formatting to suit your specific needs."
+                title="Personalizável"
+                description="Configure mapeamentos de colunas e formatação para atender às suas necessidades específicas."
               />
             </div>
           </div>
@@ -90,9 +90,9 @@ const Index = () => {
         <section id="converter-section" className="py-20 bg-gradient-to-b from-secondary/30 to-background">
           <div className="container px-6 mx-auto">
             <div className="section-fade-in mb-12 text-center">
-              <h2 className="text-3xl font-bold tracking-tight mb-4">Convert Your Files</h2>
+              <h2 className="text-3xl font-bold tracking-tight mb-4">Converta Seus Arquivos</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Upload your XML file, specify your preferences, and download the formatted Excel spreadsheet.
+                Carregue seu arquivo XML, especifique suas preferências e baixe a planilha Excel formatada.
               </p>
             </div>
             
