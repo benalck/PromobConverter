@@ -14,7 +14,7 @@ const Footer: React.FC<FooterProps> = ({ className }) => {
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-4 md:mb-0">
             <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Conversor de XML para XLSX. Todos os direitos reservados.
+              © {new Date().getFullYear()} XML to XLSX Converter. All rights reserved.
             </p>
           </div>
           
@@ -28,9 +28,9 @@ const Footer: React.FC<FooterProps> = ({ className }) => {
               <span className="sr-only">Twitter</span>
             </a>
             <div className="text-sm text-muted-foreground flex items-center">
-              <span>Feito com</span>
+              <span>Made with</span>
               <Heart className="h-3 w-3 mx-1 text-red-500 animate-pulse-subtle" />
-              <span>por Lovable</span>
+              <span>by Lovable</span>
             </div>
           </div>
         </div>

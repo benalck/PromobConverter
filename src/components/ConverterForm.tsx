@@ -31,75 +31,23 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
 
     setIsConverting(true);
     
+    // Read the file content
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const xmlContent = e.target?.result as string;
         
+        // Convert XML to CSV
         const csvString = convertXMLToCSV(xmlContent);
         
-        const htmlPrefix = 
-          `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-          <head>
-            <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-            <!--[if gte mso 9]>
-            <xml>
-              <x:ExcelWorkbook>
-                <x:ExcelWorksheets>
-                  <x:ExcelWorksheet>
-                    <x:Name>Planilha</x:Name>
-                    <x:WorksheetOptions>
-                      <x:DisplayGridlines/>
-                    </x:WorksheetOptions>
-                  </x:ExcelWorksheet>
-                </x:ExcelWorksheets>
-              </x:ExcelWorkbook>
-            </xml>
-            <![endif]-->
-            <style>
-              table, td, th {
-                border: 1px solid #000000;
-                border-collapse: collapse;
-                padding: 5px;
-                text-align: center;
-              }
-              th {
-                background-color: #f0f0f0;
-                font-weight: bold;
-              }
-              .piece-desc {
-                background-color: #E5DEFF;
-              }
-              .material {
-                background-color: #FDE1D3;
-              }
-              .comp {
-                background-color: #FDE1D3;
-              }
-              .larg {
-                background-color: #D3E4FD;
-              }
-              .borda-inf, .borda-sup {
-                background-color: #FDE1D3;
-              }
-              .borda-dir, .borda-esq {
-                background-color: #D3E4FD;
-              }
-              .edge-color {
-                background-color: #FEF7CD;
-              }
-            </style>
-          </head>
-          <body>
-            <table border="1">`;
+        // Create a Blob with BOM for Excel UTF-8 compatibility
+        const BOM = "\uFEFF"; // UTF-8 BOM character
+        const blob = new Blob([BOM + csvString], { type: 'text/csv;charset=utf-8;' });
         
-        const htmlSuffix = `</table></body></html>`;
-        
-        const blob = new Blob([htmlPrefix + csvString + htmlSuffix], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-        
+        // Create a link and trigger the download
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `${outputFileName}.xls`;
+        link.download = `${outputFileName}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -132,32 +80,17 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
     
     reader.readAsText(xmlFile);
   };
-
+  
   const convertXMLToCSV = (xmlContent: string): string => {
     try {
+      // Parse XML
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
       
-      let csvContent = 
-        `<tr>
-          <th>NUM.</th>
-          <th>MÓDULO</th>
-          <th>CLIENTE</th>
-          <th>AMBIENTE</th>
-          <th class="piece-desc">DESC. DA PEÇA</th>
-          <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-          <th style="background-color: #FDE1D3;" class="comp">COMP</th>
-          <th style="background-color: #D3E4FD;" class="larg">LARG</th>
-          <th>QUANT</th>
-          <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
-          <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
-          <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
-          <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
-          <th class="edge-color">COR FITA DE BORDA</th>
-          <th class="material">CHAPA</th>
-          <th class="material">ESP.</th>
-        </tr>`;
+      // Prepare the CSV content, starting with headers
+      let csvContent = "NUM.;MÓDULO;CLIENTE;AMBIENTE;DESC. DA PEÇA;OBSERVAÇÕES DA PEÇA;COMP;LARG;QUANT;BORDA INF;BORDA SUP;BORDA DIR;BORDA ESQ;COR FITA DE BORDA;CHAPA;ESP.\n";
       
+      // First try to parse ITEM tags (new format)
       const itemElements = xmlDoc.querySelectorAll('ITEM');
       
       if (itemElements.length > 0) {
@@ -168,32 +101,16 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           const description = item.getAttribute('DESCRIPTION') || '';
           const observations = item.getAttribute('OBSERVATIONS') || '';
           const width = item.getAttribute('WIDTH') || '';
-          const height = item.getAttribute('HEIGHT') || '';
           const depth = item.getAttribute('DEPTH') || '';
           const quantity = item.getAttribute('QUANTITY') || '1';
-          const repetition = item.getAttribute('REPETITION') || '1';
           const family = item.getAttribute('FAMILY') || '';
-          const reference = item.getAttribute('REFERENCE') || '';
-          const uniqueId = item.getAttribute('UNIQUEID') || '';
           
-          // Skip accessories, hardware, production processes, and handles
-          if (family.toLowerCase().includes('acessório') || 
-              family.toLowerCase().includes('acessorios') || 
-              family.toLowerCase().includes('ferragem') || 
-              family.toLowerCase().includes('processo') || 
-              family.toLowerCase().includes('puxador')) {
-            return; // Skip this item
-          }
-          
-          // Format module information in the required format: (ID) - Description - LxAxP
-          const moduleInfo = uniqueId && description ? 
-            `(${uniqueId}) - ${description} - L.${width}mm x A.${height}mm x P.${depth}mm` : 
-            family;
-          
+          // Get material and color from references
           let material = '';
           let color = '';
           let thickness = '';
           
+          // Try to find REFERENCES section inside the ITEM
           const referencesElements = item.querySelectorAll('REFERENCES > COMPLETE, REFERENCES > MATERIAL, REFERENCES > MODEL, REFERENCES > MODEL_DESCRIPTION, REFERENCES > THICKNESS');
           
           referencesElements.forEach(ref => {
@@ -209,6 +126,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
           });
           
+          // Get edge banding information - using X instead of "Sim" and empty string instead of "Não"
           let edgeBottom = '';
           let edgeTop = '';
           let edgeRight = '';
@@ -231,34 +149,32 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             }
           });
           
-          let edgeColor = color;
+          // Get edge band color
+          let edgeColor = color; // Default to the same color as the piece
           const edgeColorElement = item.querySelector('REFERENCES > MODEL_DESCRIPTION_FITA');
           if (edgeColorElement) {
             edgeColor = edgeColorElement.getAttribute('REFERENCE') || color;
           }
           
-          // Calculate total quantity (QUANTITY * REPETITION)
-          const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
-          
-          csvContent += 
-            `<tr>
-              <td>${rowCount}</td>
-              <td>${escapeHtml(moduleInfo)}</td>
-              <td>Cliente</td>
-              <td>Ambiente</td>
-              <td class="piece-desc">${escapeHtml(description)}</td>
-              <td class="piece-desc">${escapeHtml(observations)}</td>
-              <td class="comp">${depth}</td>
-              <td class="larg">${width}</td>
-              <td>${totalQuantity}</td>
-              <td class="borda-inf">${edgeBottom}</td>
-              <td class="borda-sup">${edgeTop}</td>
-              <td class="borda-dir">${edgeRight}</td>
-              <td class="borda-esq">${edgeLeft}</td>
-              <td class="edge-color">${escapeHtml(edgeColor)}</td>
-              <td class="material">${escapeHtml(material)}</td>
-              <td class="material">${thickness}</td>
-            </tr>`;
+          // Add row to CSV
+          csvContent += formatCSVRow([
+            rowCount.toString(),          // NUM.
+            family,                       // MÓDULO
+            'Cliente',                    // CLIENTE (can be customized)
+            'Ambiente',                   // AMBIENTE
+            description,                  // DESC. DA PEÇA
+            observations,                 // OBSERVAÇÕES DA PEÇA
+            depth,                        // COMP
+            width,                        // LARG
+            quantity,                     // QUANT
+            edgeBottom,                   // BORDA INF
+            edgeTop,                      // BORDA SUP
+            edgeRight,                    // BORDA DIR
+            edgeLeft,                     // BORDA ESQ
+            edgeColor,                    // COR FITA DE BORDA
+            material,                     // CHAPA
+            thickness                     // ESP.
+          ]);
           
           rowCount++;
         });
@@ -266,28 +182,12 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
         return csvContent;
       }
       
+      // If no ITEM tags, try the previous format with model categories
       const modelCategories = Array.from(xmlDoc.querySelectorAll('MODELCATEGORYINFORMATION, ModelCategoryInformation, modelcategoryinformation'));
       
       if (modelCategories.length === 0) {
-        csvContent += 
-          `<tr>
-            <td>1</td>
-            <td>Cozinhas</td>
-            <td>Cliente Exemplo</td>
-            <td>Exemplo</td>
-            <td class="piece-desc">Exemplo Peça</td>
-            <td class="piece-desc">Observações Exemplo</td>
-            <td class="comp">100</td>
-            <td class="larg">50</td>
-            <td>2</td>
-            <td class="borda-inf">X</td>
-            <td class="borda-sup"></td>
-            <td class="borda-dir">X</td>
-            <td class="borda-esq"></td>
-            <td class="edge-color">Branco</td>
-            <td class="material">Chapa Exemplo</td>
-            <td class="material">Espessura Exemplo</td>
-          </tr>`;
+        // If no categories found, create a simple sample row
+        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'X', '', 'X', '', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
         return csvContent;
       }
       
@@ -296,88 +196,90 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       modelCategories.forEach(category => {
         const categoryDesc = category.getAttribute('DESCRIPTION') || category.getAttribute('Description') || 'Unknown Category';
         
+        // Find all model information elements within this category
         const modelInfos = Array.from(category.querySelectorAll('MODELINFORMATION, ModelInformation, modelinformation'));
         
         modelInfos.forEach(modelInfo => {
           const modelDesc = modelInfo.getAttribute('DESCRIPTION') || modelInfo.getAttribute('Description') || 'Unknown Model';
+          const modelId = modelInfo.getAttribute('ID') || modelInfo.getAttribute('Id') || '';
           
-          csvContent += 
-            `<tr>
-              <td>${rowCount}</td>
-              <td>Cozinhas</td>
-              <td>Cliente Exemplo</td>
-              <td>${escapeHtml(categoryDesc)}</td>
-              <td class="piece-desc">${escapeHtml(modelDesc)}</td>
-              <td class="piece-desc">Observações Exemplo</td>
-              <td class="comp">100</td>
-              <td class="larg">50</td>
-              <td>2</td>
-              <td class="borda-inf">X</td>
-              <td class="borda-sup"></td>
-              <td class="borda-dir">X</td>
-              <td class="borda-esq"></td>
-              <td class="edge-color">Branco</td>
-              <td class="material">Chapa Exemplo</td>
-              <td class="material">Espessura Exemplo</td>
-            </tr>`;
-          rowCount++;
+          // Find all model type information elements within this model
+          const modelTypes = Array.from(modelInfo.querySelectorAll('MODELTYPEINFORMATION, ModelTypeInformation, modeltypeinformation'));
+          
+          if (modelTypes.length === 0) {
+            // Add a row even if no model types
+            csvContent += formatCSVRow([
+              rowCount.toString(), 
+              'Cozinhas', 
+              'Cliente Exemplo', 
+              categoryDesc, 
+              modelDesc, 
+              'Observações Exemplo', 
+              '100', 
+              '50', 
+              '2', 
+              'X', 
+              '', 
+              'X', 
+              '', 
+              'Branco', 
+              'Chapa Exemplo', 
+              'Espessura Exemplo'
+            ]);
+            rowCount++;
+          } else {
+            modelTypes.forEach(() => {
+              csvContent += formatCSVRow([
+                rowCount.toString(), 
+                'Cozinhas', 
+                'Cliente Exemplo', 
+                categoryDesc, 
+                modelDesc, 
+                'Observações Exemplo', 
+                '100', 
+                '50', 
+                '2', 
+                'X', 
+                '', 
+                'X', 
+                '', 
+                'Branco', 
+                'Chapa Exemplo', 
+                'Espessura Exemplo'
+              ]);
+              rowCount++;
+            });
+          }
         });
       });
       
       if (rowCount === 1) {
-        csvContent += 
-          `<tr>
-            <td>1</td>
-            <td>Cozinhas</td>
-            <td>Cliente Exemplo</td>
-            <td>Exemplo</td>
-            <td class="piece-desc">Exemplo Peça</td>
-            <td class="piece-desc">Observações Exemplo</td>
-            <td class="comp">100</td>
-            <td class="larg">50</td>
-            <td>2</td>
-            <td class="borda-inf">X</td>
-            <td class="borda-sup"></td>
-            <td class="borda-dir">X</td>
-            <td class="borda-esq"></td>
-            <td class="edge-color">Branco</td>
-            <td class="material">Chapa Exemplo</td>
-            <td class="material">Espessura Exemplo</td>
-          </tr>`;
+        // Add a sample row if no data was found
+        csvContent += formatCSVRow(['1', 'Cozinhas', 'Cliente Exemplo', 'Exemplo', 'Exemplo Peça', 'Observações Exemplo', '100', '50', '2', 'X', '', 'X', '', 'Branco', 'Chapa Exemplo', 'Espessura Exemplo']);
       }
       
       return csvContent;
       
     } catch (error) {
       console.error('Error converting XML to CSV:', error);
-      return `<tr>
-        <th>NUM.</th>
-        <th>MÓDULO</th>
-        <th>CLIENTE</th>
-        <th>AMBIENTE</th>
-        <th class="piece-desc">DESC. DA PEÇA</th>
-        <th class="piece-desc">OBSERVAÇÕES DA PEÇA</th>
-        <th style="background-color: #FDE1D3;" class="comp">COMP</th>
-        <th style="background-color: #D3E4FD;" class="larg">LARG</th>
-        <th>QUANT</th>
-        <th style="background-color: #FDE1D3;" class="borda-inf">BORDA INF</th>
-        <th style="background-color: #FDE1D3;" class="borda-sup">BORDA SUP</th>
-        <th style="background-color: #D3E4FD;" class="borda-dir">BORDA DIR</th>
-        <th style="background-color: #D3E4FD;" class="borda-esq">BORDA ESQ</th>
-        <th class="edge-color">COR FITA DE BORDA</th>
-        <th class="material">CHAPA</th>
-        <th class="material">ESP.</th>
-      </tr>`;
+      // Return a basic CSV with just headers if there's an error
+      return "NUM.;MÓDULO;CLIENTE;AMBIENTE;DESC. DA PEÇA;OBSERVAÇÕES DA PEÇA;COMP;LARG;QUANT;BORDA INF;BORDA SUP;BORDA DIR;BORDA ESQ;COR FITA DE BORDA;CHAPA;ESP.\n";
     }
   };
   
-  const escapeHtml = (unsafe: string): string => {
-    return unsafe
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  const formatCSVRow = (values: string[]): string => {
+    // Format values for Excel CSV standard - using semicolons as separators and double-quotes for text fields
+    const formattedValues = values.map(value => {
+      // Check if value contains special characters that require quotes
+      if (value.includes(';') || value.includes('"') || value.includes('\n') || value.includes(',')) {
+        // Escape double quotes by doubling them and wrap in quotes
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    });
+    
+    // Join with semicolons (better Excel compatibility in many locales, especially Brazil)
+    return formattedValues.join(';') + '\n';
   };
 
   return (
