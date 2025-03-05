@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -160,13 +159,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   };
 
   const extractPieceInfo = (description: string, uniqueId: string): string => {
-    // Simplify the description format to match the reference
-    // Format: "UniqueId - Description"
     let formattedDesc = description;
     
-    // If we have a uniqueId, format as "UniqueId - Description"
     if (uniqueId) {
-      formattedDesc = `${uniqueId} - ${description}`;
+      formattedDesc = `Ref.${uniqueId} - ${description}`;
     }
     
     return formattedDesc;
@@ -201,22 +197,18 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
       
       const itemElements = xmlDoc.querySelectorAll('ITEM');
       
-      // Count piece types
       const pieceTypeCount: Record<string, number> = {};
       
-      // Group items by module for the cutting plan
       const moduleGroups: Record<string, any[]> = {};
       
       if (itemElements.length > 0) {
         let csvContent = headerRow;
         let rowCount = 1;
         
-        // First, group all items by module
         itemElements.forEach(item => {
           const uniqueId = item.getAttribute('UNIQUEID') || '';
           const description = item.getAttribute('DESCRIPTION') || '';
           
-          // Skip accessories and hardware
           const family = item.getAttribute('FAMILY') || '';
           if (family.toLowerCase().includes('acessório') || 
               family.toLowerCase().includes('acessorios') || 
@@ -226,7 +218,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             return;
           }
           
-          // Use uniqueId as the module identifier, or fall back to description if needed
           const moduleKey = uniqueId || description || 'unknown_module';
           
           if (!moduleGroups[moduleKey]) {
@@ -236,9 +227,7 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           moduleGroups[moduleKey].push(item);
         });
         
-        // Then process each module group
         Object.entries(moduleGroups).forEach(([moduleKey, moduleItems]) => {
-          // Add a module header if we have multiple modules
           if (Object.keys(moduleGroups).length > 1) {
             csvContent += `<tr>
               <td colspan="18" style="text-align: center; font-weight: bold; background-color: #e0e0e0;">
@@ -247,7 +236,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             </tr>`;
           }
           
-          // Process each item in the module
           moduleItems.forEach(item => {
             const id = item.getAttribute('ID') || '';
             const description = item.getAttribute('DESCRIPTION') || '';
@@ -320,13 +308,10 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
             
             const totalQuantity = parseInt(quantity, 10) * parseInt(repetition, 10);
             
-            // Identificar o tipo de peça
             const pieceType = identifyPieceType(description);
             
-            // Format the piece description with reference number and more detailed info
             const formattedDescription = extractPieceInfo(description, uniqueId);
             
-            // Contar peças por tipo
             if (pieceTypeCount[pieceType]) {
               pieceTypeCount[pieceType] += totalQuantity;
             } else {
@@ -359,7 +344,6 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
           });
         });
         
-        // Adicionar resumo de quantidade por tipo
         csvContent += `<tr><td colspan="18" style="text-align: left; font-weight: bold; background-color: #f0f0f0;">Resumo de Quantidades por Tipo:</td></tr>`;
         
         Object.entries(pieceTypeCount).forEach(([type, count]) => {
