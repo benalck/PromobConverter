@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -159,12 +160,13 @@ const ConverterForm: React.FC<ConverterFormProps> = ({ className }) => {
   };
 
   const extractPieceInfo = (description: string, uniqueId: string): string => {
-    // Get reference number and piece name
+    // Simplify the description format to match the reference
+    // Format: "UniqueId - Description"
     let formattedDesc = description;
     
-    // If we have a uniqueId, add it as a reference number
+    // If we have a uniqueId, format as "UniqueId - Description"
     if (uniqueId) {
-      formattedDesc = `Ref.${uniqueId} - ${description}`;
+      formattedDesc = `${uniqueId} - ${description}`;
     }
     
     return formattedDesc;
